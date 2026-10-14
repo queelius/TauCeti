@@ -5,6 +5,7 @@ Authors: The Tau Ceti contributors
 -/
 module
 
+import TauCeti.MeasureTheory.Integral.CurveIntegral.Basic
 public import TauCeti.Analysis.Green.BoundaryChain.Graph
 import TauCeti.Analysis.Calculus.Deriv.CountableLevels
 import Mathlib.Analysis.Calculus.Deriv.CompMul
@@ -77,7 +78,7 @@ private theorem GraphArc.coordinatePrimitive {d : Coordinate} {g : ℝ → ℝ} 
   have hT : T.Countable := hS.union (toFinite _).countable
   refine ⟨fun t ↦ A (θ t) - A (θ 0), (hA.comp hθ).sub continuous_const,
     sub_self _, s ∪ {t | θ t ∈ T ∧ deriv θ t ≠ 0}, hs.union
-      (countable_preimage_nonzero_deriv θ hT), ?_⟩
+      (TauCeti.countable_setOf_mem_and_deriv_ne_zero θ hT), ?_⟩
   intro t ht
   have hdt := hdθ t ⟨ht.1, fun hm ↦ ht.2 (Or.inl hm)⟩
   have hp : d.proj (deriv γ.2.2.extend t) = deriv θ t := by
@@ -89,10 +90,11 @@ private theorem GraphArc.coordinatePrimitive {d : Coordinate} {g : ℝ → ℝ} 
         have he : γ.2.2.extend = d.graph g ∘ θ := funext h.extend_eq
         apply hd
         rw [he]
+        have hi : θ t ∈ Ioo a b := by
+          rw [← Icc_sdiff_both]
+          exact ⟨hb, fun h ↦ hm (Or.inr h)⟩
         exact (d.differentiableAt_graph (hdg (θ t)
-          ⟨⟨lt_of_le_of_ne hb.1 (fun he ↦ hm (Or.inr (by simp [he]))),
-            lt_of_le_of_ne hb.2 (fun he ↦ hm (Or.inr (by simp [he])))⟩,
-            fun he ↦ hm (Or.inl he)⟩)).comp t hdt
+          ⟨hi, fun h ↦ hm (Or.inl h)⟩)).comp t hdt
       have hz : deriv θ t = 0 := by
         by_contra hz
         exact ht.2 (Or.inr ⟨hm, hz⟩)
@@ -135,8 +137,8 @@ private theorem CoordinatePrimitive.trans {d : Coordinate} {P : ℂ → ℝ}
       have hd := ((hdF (2 * t) ⟨⟨by linarith [ht.1.1], by linarith⟩, hts⟩).comp t
         ((hasDerivAt_id t).const_mul 2)).congr_of_eventuallyEq hf
       rw [he.deriv_eq, deriv_comp_mul_left]
-      simpa only [he.self_of_nhds, map_smul, smul_eq_mul, mul_one, one_mul, mul_comm, mul_left_comm,
-        mul_assoc] using hd
+      simp only [he.self_of_nhds, map_smul, smul_eq_mul]
+      convert hd using 1; simp only [mul_one]; ring
     · have hgt : 1 / 2 < t := lt_of_le_of_ne (le_of_not_gt hlt) hn.symm
       have htu : 2 * t - 1 ∉ u := fun hm ↦ ht.2 (Or.inl (Or.inr
         ⟨2 * t - 1, hm, by ring⟩))
@@ -153,8 +155,8 @@ private theorem CoordinatePrimitive.trans {d : Coordinate} {P : ℂ → ℝ}
         have hh := deriv_comp_mul_left 2 (fun x ↦ δ.extend (x - 1)) t
         simpa only [deriv_comp_sub_const] using hh
       rw [he.deriv_eq, hder]
-      simpa only [he.self_of_nhds, map_smul, smul_eq_mul, mul_one, one_mul, mul_comm, mul_left_comm,
-        mul_assoc] using hd
+      simp only [he.self_of_nhds, map_smul, smul_eq_mul]
+      convert hd using 1; simp only [mul_one]; ring
 
 private theorem CoordinatePrimitive.symm {d : Coordinate} {P : ℂ → ℝ} {p q : ℂ}
     {γ : Path p q} {F : ℝ → ℝ} (hF : CoordinatePrimitive d P ⟨p, q, γ⟩ F) :
@@ -167,12 +169,7 @@ private theorem CoordinatePrimitive.symm {d : Coordinate} {P : ℂ → ℝ} {p q
   have hd := ((hdF (1 - t) ⟨⟨by linarith [ht.1.2], by linarith [ht.1.1]⟩, hts⟩).comp t
     ((hasDerivAt_id t).const_sub 1)).sub_const (F 1)
   have he : γ.symm.extend = fun x ↦ γ.extend (1 - x) := funext γ.extend_symm_apply
-  have hder : deriv (fun x ↦ γ.extend (1 - x)) t =
-      -(deriv γ.extend (1 - t)) := by
-    have hh := deriv_comp_mul_left (-1) (fun x ↦ γ.extend (x + 1)) t
-    simpa only [deriv_comp_add_const, neg_one_smul, neg_mul, one_mul,
-      ← sub_eq_neg_add] using hh
-  rw [he, hder]
+  rw [he, deriv_comp_const_sub]
   simpa only [map_neg, mul_neg, mul_neg_one, mul_one, Function.comp_apply] using hd
 
 private theorem CoordinatePrimitive.reparam {d : Coordinate} {P : ℂ → ℝ}
@@ -206,9 +203,9 @@ private theorem CoordinatePrimitive.reparam {d : Coordinate} {P : ℂ → ℝ}
       have hdt := hdu t ⟨ht.1, fun h ↦ ht.2 (Or.inl h)⟩
       have hav : θ t ∉ T := fun h ↦ ht.2 (Or.inr h)
       have hm := hmap (Ioo_subset_Icc_self ht.1)
-      have hmt : θ t ∈ Ioo 0 1 := ⟨lt_of_le_of_ne hm.1
-        (fun h ↦ hav (Or.inr (by simp [h]))), lt_of_le_of_ne hm.2
-        (fun h ↦ hav (Or.inr (by simp [h])))⟩
+      have hmt : θ t ∈ Ioo 0 1 := by
+        rw [← Icc_sdiff_both]
+        exact ⟨hm, fun h ↦ hav (Or.inr h)⟩
       have hdcur := hdv (θ t) ⟨hmt, fun h ↦ hav (Or.inl (Or.inr h))⟩
       have hdp := hdF (θ t) ⟨hmt, fun h ↦ hav (Or.inl (Or.inl h))⟩
       have heγ : γ.extend =ᶠ[𝓝 t] δ.extend ∘ θ := by
@@ -221,8 +218,8 @@ private theorem CoordinatePrimitive.reparam {d : Coordinate} {P : ℂ → ℝ}
       have hdγ := (hdcur.hasDerivAt.scomp t hdt.hasDerivAt).congr_of_eventuallyEq heγ
       have hp := (hdp.comp t hdt.hasDerivAt).congr_of_eventuallyEq heF
       rw [hdγ.deriv]
-      simpa only [map_smul, smul_eq_mul, Function.comp_apply, heγ.self_of_nhds,
-        mul_comm, mul_left_comm, mul_assoc] using hp
+      simp only [map_smul, smul_eq_mul, Function.comp_apply, heγ.self_of_nhds]
+      convert hp using 1; ring
   · rw [Function.comp_apply, heΦ 1 ⟨zero_le_one, le_rfl⟩]
 
 private theorem CoordinatePrimitive.hasIntegral {d : Coordinate} {P : ℂ → ℝ}
@@ -243,16 +240,8 @@ private theorem PiecewiseGraphArc.coordinatePrimitive {d : Coordinate} {U : Set 
   | @constant p q γ hγ =>
     refine ⟨fun _ ↦ 0, continuous_const, rfl, ∅, countable_empty, ?_⟩
     intro t _
-    have he : d.proj ∘ γ.extend = fun _ ↦ d.proj p := by
-      funext x
-      obtain ⟨u, hu⟩ := (γ.extend_range ▸ mem_range_self x : γ.extend x ∈ range γ)
-      simpa only [Function.comp_apply, ← hu] using hγ u
-    have hz : d.proj (deriv γ.extend t) = 0 := by
-      by_cases hd : DifferentiableAt ℝ γ.extend t
-      · have hh := d.proj.hasFDerivAt.comp_hasDerivAt t hd.hasDerivAt
-        rw [he] at hh
-        exact hh.unique (hasDerivAt_const t (d.proj p))
-      · rw [deriv_zero_of_not_differentiableAt hd, map_zero]
+    have hz : d.proj (deriv γ.extend t) = 0 :=
+      d.proj.deriv_eq_zero_of_forall_eq (γ.forall_extend (P := fun z ↦ d.proj z = d.proj p) hγ) t
     simpa only [hz, mul_zero] using hasDerivAt_const t (0 : ℝ)
   | graph hγ hU => exact hγ.coordinatePrimitive (hP.mono hU)
   | trans hγ hδ ihγ ihδ =>

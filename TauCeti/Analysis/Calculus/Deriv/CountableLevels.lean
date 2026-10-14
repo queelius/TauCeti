@@ -6,6 +6,7 @@ Authors: The Tau Ceti contributors
 module
 
 public import Mathlib.Analysis.Calculus.Deriv.Basic
+public import Mathlib.Analysis.Calculus.ContDiff.Basic
 import Mathlib.Analysis.Calculus.Deriv.Inverse
 import Mathlib.Topology.Order.LeftRightNhds
 public import Mathlib.MeasureTheory.Measure.Typeclasses.NullSingletonClass
@@ -15,7 +16,8 @@ public import Mathlib.MeasureTheory.Measure.Typeclasses.NullSingletonClass
 
 A nonzero derivative isolates a real function's level-set point. Consequently the derivative
 vanishes almost everywhere on the preimage of any countable set of levels, even when that
-preimage is uncountable.
+preimage is uncountable. Finite-exception C¹ regularity supplies a countable differentiability
+exception set in the interior of an interval.
 -/
 
 public section
@@ -23,36 +25,53 @@ public section
 open MeasureTheory Set
 open scoped Topology
 
-/-- Points of a real level set with nonzero derivative form a countable set. -/
-theorem countable_level_nonzero_deriv (θ : ℝ → ℝ) (c : ℝ) :
-    {t | θ t = c ∧ deriv θ t ≠ 0}.Countable := by
-  apply (countable_setOfPred_isolated_right_within (s := {t | θ t = c})).mono
-  intro t ht
-  refine ⟨ht.1, ?_⟩
-  apply Filter.eventually_false_iff_eq_bot.mp
-  have he : ∀ᶠ u in nhdsWithin t {t}ᶜ, θ u ≠ c :=
-    (differentiableAt_of_deriv_ne_zero ht.2).hasDerivAt.eventually_ne ht.2
-  have hm : nhdsWithin t ({u | θ u = c} ∩ Ioi t) ≤ nhdsWithin t {t}ᶜ := by
-    apply nhdsWithin_mono
-    intro u hu
-    exact hu.2.ne'
-  filter_upwards [he.filter_mono hm, self_mem_nhdsWithin] with u hne hu
-  exact hne hu.1
+namespace TauCeti
 
-/-- On countably many real levels there are only countably many points with nonzero derivative. -/
-theorem countable_preimage_nonzero_deriv (θ : ℝ → ℝ) {S : Set ℝ} (hS : S.Countable) :
+/-- The points of a level set with nonzero derivative are countable, for any real normed
+space as codomain. -/
+theorem countable_setOf_eq_and_deriv_ne_zero {E : Type*} [NormedAddCommGroup E]
+    [NormedSpace ℝ E] (f : ℝ → E) (c : E) :
+    {t | f t = c ∧ deriv f t ≠ 0}.Countable := by
+  refine (countable_setOfPred_isolated_left_within (s := {t | f t = c})).mono ?_
+  rintro t ⟨ht, hderiv⟩
+  refine ⟨ht, ?_⟩
+  have hne : ∀ᶠ u in 𝓝[≠] t, f u ≠ c := by
+    rw [← Filter.not_frequently]
+    exact fun h ↦ hderiv (deriv_zero_of_frequently_const h)
+  have hc : {u | f u = c}ᶜ ∈ 𝓝[Iio t] t :=
+    nhdsWithin_mono t (fun _ hu ↦ ne_of_lt hu) hne
+  rw [Set.inter_comm, nhdsWithin_inter']
+  exact Filter.inf_principal_eq_bot.mpr hc
+
+/-- On countably many levels there are only countably many points with nonzero derivative. -/
+theorem countable_setOf_mem_and_deriv_ne_zero {E : Type*} [NormedAddCommGroup E]
+    [NormedSpace ℝ E] (θ : ℝ → E) {S : Set E} (hS : S.Countable) :
     {t | θ t ∈ S ∧ deriv θ t ≠ 0}.Countable := by
-  apply (hS.biUnion (fun c _ ↦ countable_level_nonzero_deriv θ c)).mono
+  apply (hS.biUnion (fun c _ ↦ countable_setOf_eq_and_deriv_ne_zero θ c)).mono
   intro t ht
   exact mem_iUnion.mpr ⟨θ t, mem_iUnion.mpr ⟨ht.1, ⟨rfl, ht.2⟩⟩⟩
+
+/-- Finite-exception C¹ regularity supplies differentiability off a countable set in the
+interior interval. -/
+theorem exists_countable_differentiableAt_of_finite_exceptions
+    {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E] {a b : ℝ} {f : ℝ → E}
+    (h : ∃ s : Set ℝ, s.Finite ∧ ContDiffOn ℝ 1 f (Icc a b \ s)) :
+    ∃ s : Set ℝ, s.Countable ∧ ∀ t ∈ Ioo a b \ s, DifferentiableAt ℝ f t := by
+  obtain ⟨s, hs, hf⟩ := h
+  refine ⟨s, hs.countable, ?_⟩
+  intro t ht
+  exact (hf.contDiffAt (Filter.inter_mem (Icc_mem_nhds ht.1.1 ht.1.2)
+    (hs.isClosed.isOpen_compl.mem_nhds ht.2))).differentiableAt (by norm_num)
+
+end TauCeti
 
 /-- The derivative vanishes almost everywhere on the preimage of countably many levels for any
 measure vanishing on singletons. No differentiability assumption or countability of the preimage
 is required. -/
-theorem Set.Countable.ae_deriv_eq_zero_on_preimage [MeasurableSpace ℝ]
-    {S : Set ℝ} (hS : S.Countable)
-    (θ : ℝ → ℝ) (μ : Measure ℝ) [NullSingletonClass μ] :
+theorem Set.Countable.ae_deriv_eq_zero_on_preimage {E : Type*} [NormedAddCommGroup E]
+    [NormedSpace ℝ E] [MeasurableSpace ℝ] {S : Set E} (hS : S.Countable)
+    (θ : ℝ → E) (μ : Measure ℝ) [NullSingletonClass μ] :
     ∀ᵐ t ∂μ, θ t ∈ S → deriv θ t = 0 := by
-  filter_upwards [(countable_preimage_nonzero_deriv θ hS).ae_notMem μ] with t ht hmem
+  filter_upwards [(TauCeti.countable_setOf_mem_and_deriv_ne_zero θ hS).ae_notMem μ] with t ht hmem
   by_contra h
   exact ht ⟨hmem, h⟩

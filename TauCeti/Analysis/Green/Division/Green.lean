@@ -36,7 +36,7 @@ variable {d : Coordinate} {D U : Set ℂ}
 
 /-- Summing the cell identities gives directional Green and genuine gauge integrability on
 the finite division boundary. Cellwise area integrability is promoted to the whole region. -/
-theorem integral_boundary (V : Division d D) {P R : ℂ → ℝ}
+theorem integrable_and_integral_boundary (V : Division d D) {P R : ℂ → ℝ}
     (hP : ContinuousOn P D)
     (hdP : ∀ K ∈ V.cells, ∀ x ∈ Icc K.a K.b,
       ∀ y ∈ Ioo (K.lowerFun x) (K.upperFun x),
@@ -46,7 +46,7 @@ theorem integral_boundary (V : Division d D) {P R : ℂ → ℝ}
       BoundaryChain.integral d.proj P V.boundary =
         -(d.orientation : ℝ) * ∫ z in D, R z := by
   have hc (K : GraphCell) (hK : K ∈ V.cells) :=
-    K.integral_boundary d (hP.mono (V.region_subset hK)) (hdP K hK) (hR K hK)
+    K.integrable_and_integral_boundary d (hP.mono (V.region_subset hK)) (hdP K hK) (hR K hK)
   refine ⟨?_, V.integrableOn_iff.mpr hR, ?_⟩
   · rw [boundary_def]
     exact Finset.sum_induction _ _ (fun _ _ h₁ h₂ ↦ h₁.add h₂)
@@ -75,9 +75,9 @@ theorem green (V : Division .re D) (H : Division .im D) {c : BoundaryChain}
       IntegrableOn (fun z ↦ RQ z - RP z) D ∧
       BoundaryChain.integral Complex.reCLM P c + BoundaryChain.integral Complex.imCLM Q c =
         ∫ z in D, RQ z - RP z := by
-  have hdx := V.integral_boundary (hP.mono hDU)
+  have hdx := V.integrable_and_integral_boundary (hP.mono hDU)
     (by simpa only [Coordinate.graph_re_apply] using hdP) hRP
-  have hdy := H.integral_boundary (hQ.mono hDU)
+  have hdy := H.integrable_and_integral_boundary (hQ.mono hDU)
     (by simpa only [Coordinate.graph_im_apply] using hdQ) hRQ
   have hcx := (hV.integrable_iff hP).mp hdx.1
   have hcy := (hH.integrable_iff hQ).mp hdy.1

@@ -88,77 +88,55 @@ theorem integrable_and_integral_cellBoundary (d : Coordinate) {a b : ℝ}
     simp only [integral_ofPath] at hR' hA'
     rw [hR', hA', add_zero, sub_zero]
 
-/-- Directional Green on the actual oriented boundary of a vertical graph cell. -/
-theorem integral_cellBoundary_re {a b : ℝ} {lower upper : ℝ → ℝ} (hab : a ≤ b)
+/-- Directional Green on a graph cell with countably many graph differentiability exceptions.
+The coordinate sign supplies the vertical/horizontal boundary convention. -/
+theorem integrable_and_integral_cellBoundary_of_deriv (d : Coordinate) {a b : ℝ}
+    {lower upper : ℝ → ℝ} (hab : a ≤ b)
     (hl : ContinuousOn lower (Icc a b)) (hu : ContinuousOn upper (Icc a b))
     (hdl : ∃ S : Set ℝ, S.Countable ∧ ∀ t ∈ Ioo a b \ S, DifferentiableAt ℝ lower t)
     (hdu : ∃ S : Set ℝ, S.Countable ∧ ∀ t ∈ Ioo a b \ S, DifferentiableAt ℝ upper t)
     (hlu : ∀ x ∈ Icc a b, lower x ≤ upper x) {P R : ℂ → ℝ}
-    (hP : ContinuousOn P (verticalRegion a b lower upper))
+    (hP : ContinuousOn P (d.region a b lower upper))
     (hdP : ∀ x ∈ Icc a b, ∀ y ∈ Ioo (lower x) (upper x),
-      HasDerivAt (fun y ↦ P ⟨x, y⟩) (R ⟨x, y⟩) y)
-    (hR : IntegrableOn R (verticalRegion a b lower upper)) :
-    Integrable Complex.reCLM P (cellBoundary .re a b lower upper
+      HasDerivAt (fun y ↦ P (d.graph (fun _ ↦ y) x)) (R (d.graph (fun _ ↦ y) x)) y)
+    (hR : IntegrableOn R (d.region a b lower upper)) :
+    Integrable d.proj P (cellBoundary d a b lower upper
         (by rwa [uIcc_of_le hab]) (by rwa [uIcc_of_le hab])) ∧
-      integral Complex.reCLM P (cellBoundary .re a b lower upper
+      integral d.proj P (cellBoundary d a b lower upper
         (by rwa [uIcc_of_le hab]) (by rwa [uIcc_of_le hab])) =
-      -(∫ z in verticalRegion a b lower upper, R z) := by
-  have hPl : ContinuousOn P (Coordinate.re.graph lower '' Icc a b) := by
+        -(d.orientation : ℝ) * ∫ z in d.region a b lower upper, R z := by
+  have hgraph (g : ℝ → ℝ) (hg : ∀ x ∈ Icc a b, lower x ≤ g x ∧ g x ≤ upper x) :
+      ContinuousOn P (d.graph g '' Icc a b) := by
     apply hP.mono
     rintro z ⟨x, hx, rfl⟩
-    simpa only [Coordinate.graph_re_apply, mem_verticalRegion] using ⟨hx, le_rfl, hlu x hx⟩
-  have hPu : ContinuousOn P (Coordinate.re.graph upper '' Icc a b) := by
-    apply hP.mono
-    rintro z ⟨x, hx, rfl⟩
-    simpa only [Coordinate.graph_re_apply, mem_verticalRegion] using ⟨hx, hlu x hx, le_rfl⟩
-  have h := integrable_and_integral_cellBoundary .re hab hl hu hdl hdu hPl hPu
-  simp only [Coordinate.proj_re] at h
+    cases d <;> simpa only [Coordinate.region_re, Coordinate.region_im, Coordinate.graph_re_apply,
+      Coordinate.graph_im_apply, mem_verticalRegion, mem_horizontalRegion] using ⟨hx, hg x hx⟩
+  have hPl := hgraph lower (fun x hx ↦ ⟨le_rfl, hlu x hx⟩)
+  have hPu := hgraph upper (fun x hx ↦ ⟨hlu x hx, le_rfl⟩)
+  have h := integrable_and_integral_cellBoundary d hab hl hu hdl hdu hPl hPu
   refine ⟨h.1, h.2.trans ?_⟩
-  have hiL := (hPl.comp (Coordinate.re.continuousOn_graph hl)
-    (mapsTo_image _ _)).intervalIntegrable_of_Icc (μ := volume) hab
-  have hiU := (hPu.comp (Coordinate.re.continuousOn_graph hu)
-    (mapsTo_image _ _)).intervalIntegrable_of_Icc (μ := volume) hab
-  simp only [Coordinate.orientation_re, one_zsmul]
+  have hiL := (hPl.comp (d.continuousOn_graph hl) (mapsTo_image _ _)).intervalIntegrable_of_Icc
+    (μ := volume) hab
+  have hiU := (hPu.comp (d.continuousOn_graph hu) (mapsTo_image _ _)).intervalIntegrable_of_Icc
+    (μ := volume) hab
   simp only [Function.comp_def] at hiL hiU
-  rw [← intervalIntegral.integral_sub hiL hiU]
-  simpa only [Coordinate.graph_re_apply] using
-    integral_graphs_sub_eq_neg_integral_verticalRegion hab hl hu hlu hP hdP hR
-
-/-- Directional Green on the actual oriented boundary of a horizontal graph cell. -/
-theorem integral_cellBoundary_im {a b : ℝ} {lower upper : ℝ → ℝ} (hab : a ≤ b)
-    (hl : ContinuousOn lower (Icc a b)) (hu : ContinuousOn upper (Icc a b))
-    (hdl : ∃ S : Set ℝ, S.Countable ∧ ∀ t ∈ Ioo a b \ S, DifferentiableAt ℝ lower t)
-    (hdu : ∃ S : Set ℝ, S.Countable ∧ ∀ t ∈ Ioo a b \ S, DifferentiableAt ℝ upper t)
-    (hlu : ∀ y ∈ Icc a b, lower y ≤ upper y) {Q R : ℂ → ℝ}
-    (hQ : ContinuousOn Q (horizontalRegion a b lower upper))
-    (hdQ : ∀ y ∈ Icc a b, ∀ x ∈ Ioo (lower y) (upper y),
-      HasDerivAt (fun x ↦ Q ⟨x, y⟩) (R ⟨x, y⟩) x)
-    (hR : IntegrableOn R (horizontalRegion a b lower upper)) :
-    Integrable Complex.imCLM Q (cellBoundary .im a b lower upper
-        (by rwa [uIcc_of_le hab]) (by rwa [uIcc_of_le hab])) ∧
-      integral Complex.imCLM Q (cellBoundary .im a b lower upper
-        (by rwa [uIcc_of_le hab]) (by rwa [uIcc_of_le hab])) =
-      ∫ z in horizontalRegion a b lower upper, R z := by
-  have hQl : ContinuousOn Q (Coordinate.im.graph lower '' Icc a b) := by
-    apply hQ.mono
-    rintro z ⟨y, hy, rfl⟩
-    simpa only [Coordinate.graph_im_apply, mem_horizontalRegion] using ⟨hy, le_rfl, hlu y hy⟩
-  have hQu : ContinuousOn Q (Coordinate.im.graph upper '' Icc a b) := by
-    apply hQ.mono
-    rintro z ⟨y, hy, rfl⟩
-    simpa only [Coordinate.graph_im_apply, mem_horizontalRegion] using ⟨hy, hlu y hy, le_rfl⟩
-  have h := integrable_and_integral_cellBoundary .im hab hl hu hdl hdu hQl hQu
-  simp only [Coordinate.proj_im] at h
-  refine ⟨h.1, h.2.trans ?_⟩
-  have hiL := (hQl.comp (Coordinate.im.continuousOn_graph hl)
-    (mapsTo_image _ _)).intervalIntegrable_of_Icc (μ := volume) hab
-  have hiU := (hQu.comp (Coordinate.im.continuousOn_graph hu)
-    (mapsTo_image _ _)).intervalIntegrable_of_Icc (μ := volume) hab
-  simp only [Coordinate.orientation_im, neg_smul, one_smul, neg_sub]
-  simp only [Function.comp_def] at hiL hiU
-  rw [← intervalIntegral.integral_sub hiU hiL]
-  simpa only [Coordinate.graph_im_apply] using
-    integral_graphs_sub_eq_integral_horizontalRegion hab hl hu hlu hQ hdQ hR
+  have harea : (∫ t in a..b, P (d.graph lower t)) - (∫ t in a..b, P (d.graph upper t)) =
+      -(∫ z in d.region a b lower upper, R z) := by
+    rw [← intervalIntegral.integral_sub hiL hiU]
+    cases d with
+    | re =>
+      simp only [Coordinate.region_re, Coordinate.graph_re_apply] at hdP hR hP ⊢
+      exact integral_graphs_sub_eq_neg_integral_verticalRegion hab hl hu hlu hP hdP hR
+    | im =>
+      simp only [Coordinate.region_im, Coordinate.graph_im_apply] at hdP hR hP ⊢
+      rw [← integral_graphs_sub_eq_integral_horizontalRegion hab hl hu hlu hP hdP hR,
+        ← intervalIntegral.integral_neg]
+      congr 1
+      funext t
+      ring
+  rw [harea]
+  simp only [zsmul_eq_mul]
+  ring
 
 /-- The type-I and type-II presentations of a rectangle have the same actual integer chain.
 This supplies a common boundary directly from geometry, before any field is chosen. -/

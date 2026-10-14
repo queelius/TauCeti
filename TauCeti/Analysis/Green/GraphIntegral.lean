@@ -6,9 +6,10 @@ Authors: The Tau Ceti contributors
 module
 
 public import TauCeti.Analysis.BoxIntegral.Oriented.Calculus
+public import TauCeti.Analysis.Green.Cell
 public import Mathlib.Analysis.Complex.Basic
 public import Mathlib.Analysis.Calculus.Deriv.Prod
-import TauCeti.Analysis.Calculus.Deriv.CountableLevels
+public import TauCeti.Analysis.Calculus.Deriv.Projection
 
 /-!
 # Gauge integrals along graph arcs
@@ -140,33 +141,19 @@ theorem differentiableAt_graph (d : Coordinate) {g : ℝ → ℝ} {t : ℝ}
   · exact (hasDerivAt_verticalGraph hg.hasDerivAt).differentiableAt
   · exact (hasDerivAt_horizontalGraph hg.hasDerivAt).differentiableAt
 
-end Coordinate
+/-- The planar region between two graphs in either base-coordinate direction. -/
+def region (d : Coordinate) (a b : ℝ) (lower upper : ℝ → ℝ) : Set ℂ :=
+  match d with
+  | .re => verticalRegion a b lower upper
+  | .im => horizontalRegion a b lower upper
 
--- At regular curve points, uniqueness gives the projected derivative. At irregular curve points,
--- the total derivative is zero; the parameter derivative also vanishes almost everywhere on the
--- countably many exceptional levels. Their preimages themselves need not be null or countable.
-private theorem ae_deriv_projection {a b : ℝ} {θ θ' : ℝ → ℝ} {γ : ℝ → ℂ}
-    (π : ℂ →L[ℝ] ℝ) (hπ : π ∘ γ = θ) {s S : Set ℝ} (hs : s.Countable) (hS : S.Countable)
-    (hdθ : ∀ t ∈ Ioo a b \ s, HasDerivAt θ (θ' t) t)
-    (hdγ : ∀ t ∈ Ioo a b \ s, θ t ∉ S → DifferentiableAt ℝ γ t) :
-    (fun t ↦ π (deriv γ t)) =ᵐ[volume.restrict (Ioc a b)] θ' := by
-  filter_upwards [ae_restrict_mem measurableSet_Ioc,
-    ae_restrict_of_ae ((hs.union (Set.toFinite ({a, b} : Set ℝ)).countable).ae_notMem volume),
-    hS.ae_deriv_eq_zero_on_preimage θ (volume.restrict (Ioc a b))]
-    with t ht hts hlevel
-  have htb : t ≠ b := fun h ↦ hts (Or.inr (by simp [h]))
-  have ht' : t ∈ Ioo a b \ s :=
-    ⟨⟨ht.1, lt_of_le_of_ne ht.2 htb⟩, fun h ↦ hts (Or.inl h)⟩
-  by_cases hγ : DifferentiableAt ℝ γ t
-  · have hproj := π.hasFDerivAt.comp_hasDerivAt t hγ.hasDerivAt
-    rw [hπ] at hproj
-    exact hproj.unique (hdθ t ht')
-  · have hmem : θ t ∈ S := by
-      by_contra h
-      exact hγ (hdγ t ht' h)
-    have hzero : deriv θ t = 0 := hlevel hmem
-    rw [(hdθ t ht').deriv] at hzero
-    rw [deriv_zero_of_not_differentiableAt hγ, map_zero, hzero]
+@[simp] theorem region_re (a b : ℝ) (lower upper : ℝ → ℝ) :
+    Coordinate.re.region a b lower upper = verticalRegion a b lower upper := by rfl
+
+@[simp] theorem region_im (a b : ℝ) (lower upper : ℝ → ℝ) :
+    Coordinate.im.region a b lower upper = horizontalRegion a b lower upper := by rfl
+
+end Coordinate
 
 /-- Gauge integration on a graph depends only on the endpoint graph coordinates. The
 parametrization may backtrack and have unbounded speed, and exceptional graph levels may have
@@ -187,11 +174,10 @@ theorem hasHenstockIntervalIntegral_graph_reparam (d : Coordinate) {a b c e : �
       DifferentiableAt ℝ (d.graph graph ∘ θ) t := by
     intro t ht havoid
     have hm := hmap (uIoo_subset_uIcc_self ht.1)
-    have htc : θ t ≠ c := fun h ↦ havoid (Or.inr (by simp [h]))
-    have hte : θ t ≠ e := fun h ↦ havoid (Or.inr (by simp [h]))
-    have htθ : θ t ∈ Ioo c e \ S :=
-      ⟨⟨lt_of_le_of_ne hm.1 htc.symm, lt_of_le_of_ne hm.2 hte⟩,
-        fun h ↦ havoid (Or.inl h)⟩
+    have htθ : θ t ∈ Ioo c e \ S := by
+      refine ⟨?_, fun h ↦ havoid (Or.inl h)⟩
+      rw [← Icc_sdiff_both]
+      exact ⟨hm, fun h ↦ havoid (Or.inr h)⟩
     exact (d.differentiableAt_graph (hdgraph (θ t) htθ)).comp t (hdθ t ht).differentiableAt
   have hcoord : d.proj ∘ (d.graph graph ∘ θ) = θ := by
     ext t
@@ -223,13 +209,7 @@ No regularity of its other coordinate or of the field is needed. -/
 theorem hasHenstockIntervalIntegral_of_projection_constant (L : ℂ →L[ℝ] ℝ) {a b c : ℝ}
     {γ : ℝ → ℂ} (hγ : ∀ t, L (γ t) = c) (P : ℂ → ℝ) :
     TauCeti.BoxIntegral.HasHenstockIntervalIntegral (fun t ↦ P (γ t) * L (deriv γ t)) a b 0 := by
-  have hc : L ∘ γ = fun _ ↦ c := funext hγ
-  have hd (t : ℝ) : L (deriv γ t) = 0 := by
-    by_cases h : DifferentiableAt ℝ γ t
-    · have hp := L.hasFDerivAt.comp_hasDerivAt t h.hasDerivAt
-      rw [hc] at hp
-      exact hp.unique (hasDerivAt_const t c)
-    · rw [deriv_zero_of_not_differentiableAt h, map_zero]
+  have hd (t : ℝ) : L (deriv γ t) = 0 := L.deriv_eq_zero_of_forall_eq hγ t
   simpa only [hd, mul_zero, smul_zero] using
     TauCeti.BoxIntegral.hasHenstockIntervalIntegral_const (0 : ℝ) a b
 

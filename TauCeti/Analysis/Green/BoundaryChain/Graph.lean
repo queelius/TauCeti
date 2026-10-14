@@ -9,6 +9,7 @@ public import TauCeti.Analysis.Green.BoundaryChain.Basic
 public import Mathlib.Analysis.Convex.PathConnected
 import Mathlib.Analysis.Calculus.Deriv.AffineMap
 import Mathlib.Analysis.Calculus.Deriv.Mul
+import TauCeti.MeasureTheory.Integral.CurveIntegral.Basic
 
 /-!
 # Graph certificates for path integrals
@@ -175,11 +176,9 @@ theorem coordinate_constant_trans_iff (d : Coordinate) {p q r : ℂ}
 theorem GraphArc.extend_eq {d : Coordinate} {g : ℝ → ℝ} {a b : ℝ} {γ : Arc}
     (h : GraphArc d g a b γ) (t : ℝ) :
     γ.2.2.extend t = d.graph g (d.proj (γ.2.2.extend t)) := by
-  obtain ⟨u, hu⟩ := (γ.2.2.extend_range ▸ mem_range_self t : γ.2.2.extend t ∈ range γ.2.2)
-  rw [← hu]
-  exact h.on_graph u
+  exact γ.2.2.forall_extend (P := fun z ↦ z = d.graph g (d.proj z)) h.on_graph t
 
-/-- The graph coordinate of either endpoint lies in the base interval. -/
+/-- The graph coordinate of the initial endpoint lies in the base interval. -/
 theorem GraphArc.source_mem {d : Coordinate} {g : ℝ → ℝ} {a b : ℝ} {γ : Arc}
     (h : GraphArc d g a b γ) : d.proj γ.1 ∈ Icc a b := by
   simpa using h.coordinate_mem 0

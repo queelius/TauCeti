@@ -5,6 +5,7 @@ Authors: The Tau Ceti contributors
 -/
 module
 
+import TauCeti.MeasureTheory.Integral.CurveIntegral.Basic
 public import TauCeti.Analysis.Green.BoundaryChain.PiecewiseGraph
 
 /-!
@@ -33,12 +34,9 @@ theorem hasIntegral_of_coordinate_constant (L : ℂ →L[ℝ] ℝ) {p q : ℂ} (
       BoxIntegral.IntegrationParams.Henstock
       (fun t ↦ P (γ.extend (t 0)) * L (deriv γ.extend (t 0)))
       BoxIntegral.BoxAdditiveMap.volume 0 := by
-  have hc : L ∘ γ.extend = fun _ ↦ L p := by
-    ext t
-    obtain ⟨u, hu⟩ := (γ.extend_range ▸ mem_range_self t : γ.extend t ∈ range γ)
-    simpa only [Function.comp_apply, ← hu] using hγ u
+  have hc (t : ℝ) : L (γ.extend t) = L p := γ.forall_extend (P := fun z ↦ L z = L p) hγ t
   have hi := hasHenstockIntervalIntegral_of_projection_constant L (a := 0) (b := 1)
-    (γ := γ.extend) (c := L p) (congrFun hc) P
+    (γ := γ.extend) (c := L p) hc P
   rw [TauCeti.BoxIntegral.hasHenstockIntervalIntegral_iff_of_lt zero_lt_one] at hi
   exact hi
 
@@ -188,7 +186,7 @@ theorem NullChain.integrable_and_integral_eq_zero {d : Coordinate} {U : Set ℂ}
         hδ.arcIntegral_reparam hθ hdθ hdδ hfib hmap h0 h1 he hP, sub_self]
 
 /-- A geometric certificate comparing two boundaries gives equality of their coordinate
-integrals. Integrability of either presentation transfers to the other. -/
+integrals. Integrability transfer is given separately by `NullChain.integrable_iff`. -/
 theorem NullChain.integral_eq {d : Coordinate} {U : Set ℂ} {c e : BoundaryChain}
     (h : NullChain d U (c - e)) {P : ℂ → ℝ} (hP : ContinuousOn P U) :
     integral d.proj P c = integral d.proj P e := by
