@@ -9,7 +9,7 @@ public import TauCeti.Analysis.Green.BoundaryChain.Basic
 public import Mathlib.Analysis.Convex.PathConnected
 import Mathlib.Analysis.Calculus.Deriv.AffineMap
 import Mathlib.Analysis.Calculus.Deriv.Mul
-import TauCeti.MeasureTheory.Integral.CurveIntegral.Basic
+import TauCeti.Topology.Path.Extend
 
 /-!
 # Graph certificates for path integrals

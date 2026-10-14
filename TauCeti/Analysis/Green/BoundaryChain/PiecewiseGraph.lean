@@ -5,7 +5,7 @@ Authors: The Tau Ceti contributors
 -/
 module
 
-import TauCeti.MeasureTheory.Integral.CurveIntegral.Basic
+import TauCeti.Topology.Path.Extend
 public import TauCeti.Analysis.Green.BoundaryChain.Graph
 import TauCeti.Analysis.Calculus.Deriv.CountableLevels
 import Mathlib.Analysis.Calculus.Deriv.CompMul

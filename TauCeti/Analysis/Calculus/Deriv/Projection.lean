@@ -33,11 +33,9 @@ theorem ContinuousLinearMap.deriv_eq_zero_of_forall_eq {E : Type*} [NormedAddCom
     exact hp.unique (hasDerivAt_const t c)
   · rw [deriv_zero_of_not_differentiableAt h, map_zero]
 
-namespace TauCeti
-
 /-- A real projection of a curve has the prescribed derivative almost everywhere, even when
 exceptional projection levels have uncountable preimages. -/
-theorem ae_deriv_projection {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
+theorem ContinuousLinearMap.apply_deriv_ae_eq {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
     {a b : ℝ} {θ θ' : ℝ → ℝ} {γ : ℝ → E}
     (π : E →L[ℝ] ℝ) (hπ : π ∘ γ = θ) {s S : Set ℝ} (hs : s.Countable) (hS : S.Countable)
     (hdθ : ∀ t ∈ Ioo a b \ s, HasDerivAt θ (θ' t) t)
@@ -60,5 +58,3 @@ theorem ae_deriv_projection {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ 
     have hzero : deriv θ t = 0 := hlevel hmem
     rw [(hdθ t ht').deriv] at hzero
     rw [deriv_zero_of_not_differentiableAt hγ, map_zero, hzero]
-
-end TauCeti

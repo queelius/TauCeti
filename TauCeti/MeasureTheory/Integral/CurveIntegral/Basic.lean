@@ -35,9 +35,3 @@ theorem curveIntegrable_iff_intervalIntegrable_deriv {𝕜 E F : Type*} [RCLike 
   rw [curveIntegralFun_def, derivWithin_of_mem_nhds (Icc_mem_nhds ht.1 ht.2)]
 
 end TauCeti
-
-/-- A property holding along a path still holds along its constant endpoint extension. -/
-theorem Path.forall_extend {E : Type*} [TopologicalSpace E] {p q : E} (γ : Path p q)
-    {P : E → Prop} (h : ∀ t, P (γ t)) (t : ℝ) : P (γ.extend t) := by
-  obtain ⟨u, hu⟩ := (γ.extend_range ▸ mem_range_self t : γ.extend t ∈ range γ)
-  simpa only [← hu] using h u

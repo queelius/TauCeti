@@ -182,7 +182,7 @@ theorem hasHenstockIntervalIntegral_graph_reparam (d : Coordinate) {a b c e : �
   have hcoord : d.proj ∘ (d.graph graph ∘ θ) = θ := by
     ext t
     simp only [Function.comp_apply, Coordinate.proj_graph]
-  have he := ae_deriv_projection (a := min a b) (b := max a b) d.proj hcoord hs
+  have he := ContinuousLinearMap.apply_deriv_ae_eq (a := min a b) (b := max a b) d.proj hcoord hs
     (hS.union (Set.toFinite ({c, e} : Set ℝ)).countable) hdθ hdγ
   have h := TauCeti.BoxIntegral.hasHenstockIntervalIntegral_deriv_smul_comp hs hθ hdθ
     (hc.mono (image_subset_iff.mpr hmap))
