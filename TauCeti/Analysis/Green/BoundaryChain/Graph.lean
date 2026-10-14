@@ -167,10 +167,8 @@ theorem coordinate_constant_trans_iff (d : Coordinate) {p q r : ℂ}
     have hm := mem_range_self t (f := γ.trans δ)
     rw [Path.trans_range] at hm
     rcases hm with ⟨u, hu⟩ | ⟨u, hu⟩
-    · rw [← hu]
-      exact hγ u
-    · rw [← hu]
-      exact (hδ u).trans hq
+    · exact hu ▸ hγ u
+    · exact hu ▸ (hδ u).trans hq
 
 /-- The constant endpoint extension still lies on the same graph. -/
 theorem GraphArc.extend_eq {d : Coordinate} {g : ℝ → ℝ} {a b : ℝ} {γ : Arc}

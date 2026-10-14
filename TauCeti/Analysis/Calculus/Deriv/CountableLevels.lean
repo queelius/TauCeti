@@ -47,8 +47,7 @@ theorem countable_setOf_eq_and_deriv_ne_zero {E : Type*} [NormedAddCommGroup E]
 theorem countable_setOf_mem_and_deriv_ne_zero {E : Type*} [NormedAddCommGroup E]
     [NormedSpace ℝ E] (θ : ℝ → E) {S : Set E} (hS : S.Countable) :
     {t | θ t ∈ S ∧ deriv θ t ≠ 0}.Countable := by
-  apply (hS.biUnion (fun c _ ↦ countable_setOf_eq_and_deriv_ne_zero θ c)).mono
-  intro t ht
+  refine (hS.biUnion (fun c _ ↦ countable_setOf_eq_and_deriv_ne_zero θ c)).mono fun t ht ↦ ?_
   exact mem_iUnion.mpr ⟨θ t, mem_iUnion.mpr ⟨ht.1, ⟨rfl, ht.2⟩⟩⟩
 
 /-- Finite-exception C¹ regularity supplies differentiability off a countable set in the
@@ -73,5 +72,4 @@ theorem Set.Countable.ae_deriv_eq_zero_on_preimage {E : Type*} [NormedAddCommGro
     (θ : ℝ → E) (μ : Measure ℝ) [NullSingletonClass μ] :
     ∀ᵐ t ∂μ, θ t ∈ S → deriv θ t = 0 := by
   filter_upwards [(TauCeti.countable_setOf_mem_and_deriv_ne_zero θ hS).ae_notMem μ] with t ht hmem
-  by_contra h
-  exact ht ⟨hmem, h⟩
+  exact not_ne_iff.mp fun h ↦ ht ⟨hmem, h⟩
